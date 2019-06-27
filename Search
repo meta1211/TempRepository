@@ -1,0 +1,626 @@
+#pragma once
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+class Node
+{
+	int key;
+	Node *left, *right, *parent;
+
+public:
+	Node(int);
+	Node(int, Node*, Node*, Node*);
+	int Key();
+	friend class BinTree;
+	friend class SBTree;
+};
+
+Node::Node(int Key = 0)
+{
+	key = Key;
+}
+
+Node::Node(int k, Node*L, Node*R, Node*P)
+{
+	key = k;
+	left = L;
+	right = R;
+	parent = P;
+}
+
+int Node::Key()
+{
+	return key;
+}
+
+class BinTree
+{
+
+protected:
+	//Node*root;
+	Node *Tree(int, Node*);
+	void Copy(Node*, int, Node*);
+public:
+	Node*root;
+	BinTree();
+	BinTree(int);
+	Node*Tree(int *, int, Node*, int);
+	BinTree(int*, int);
+	BinTree(BinTree &);
+	virtual ~BinTree();
+	virtual void Add(int, Node*);
+	virtual void Del(Node*);
+	BinTree operator=(BinTree&);
+	void TreeTraversalLCR(Node*);
+	void TreeTraversalLRC(Node*);
+	void TreeTraversalRLC(Node*);
+	virtual Node *FindKey(Node*, int);
+	virtual Node* FindMax(Node*);
+	virtual Node* FindMin(Node*);
+	int Hight(Node*);
+	void PrintTree(Node*, int);
+	void Clear(Node*);
+	Node* Root();
+
+};
+
+BinTree::BinTree()
+{
+	root = NULL;
+}
+
+BinTree::BinTree(int n)
+{
+	root = Tree(n, 0);
+}
+
+Node*BinTree::Tree(int *a, int first, Node*p, int last) //helper for konstruktor with array
+{
+	if (first > last) return NULL;
+	if (first == last) {
+		p->right = new Node(a[first], NULL, NULL, p);
+		return NULL;
+	}
+	p->left = new Node(a[first], NULL, NULL, p);
+	p->right = new Node(a[first + (last - first + 1) / 2], NULL, NULL, p);
+	if ((first - last) != 1) {
+		Tree(a, first + 1, p->left, first - 1 + (last - first + 1) / 2);
+		Tree(a, first + 1 + (last - first + 1) / 2, p->right, last);
+	}
+}
+
+BinTree::BinTree(int*a, int n)
+{
+	root = new Node(a[0]);
+	Tree(a, 1, root, n - 1);
+}
+
+BinTree::BinTree(BinTree &first)//конструктор копирования
+{
+	if (first.root) {
+		root = new Node(first.root->key);
+		if (first.root->left) {
+			Copy(first.root->left, 1, root);
+		}
+		if (first.root->right) {
+			Copy(first.root->right, 0, root);
+		}
+	}
+	else {
+		root = NULL;
+	}
+}
+
+BinTree::~BinTree()
+{
+	if (root)
+		Clear(root);
+}
+
+Node* BinTree::Tree(int n, Node* p) //строит сбалансированное дерево из n элементов, p - указатель на предка вершины
+{
+	srand(time(NULL));
+	if (n == 0) {
+		return NULL;
+	}
+	Node*q = new Node(rand() % 20);
+	int nL = (n - 1) / 2;
+	int nR = n - 1 - nL;
+	q->parent = p;
+	q->left = Tree(nL, q);
+	q->right = Tree(nR, q);
+	return q;
+}
+
+void BinTree::Copy(Node*g, int k, Node*p) //копирует дерево с корнем q, p - предок нового корня, k: 0 - копируется левое поддерево, 1 - правое дерево
+{
+	if (!g) return;
+	Node *t = new Node(g->key);
+	t->parent = p;
+	if (k == 0)
+		p->left = t;
+	else p->right = t;
+	Copy(g->left, 0, t);
+	Copy(g->right, 1, t);
+}
+
+void BinTree::Add(int k, Node*p)
+{
+	if (p->left == NULL) {
+		Node *q = new Node(k);
+		p->left = q;
+		q->parent = p;
+		return;
+	}
+	if (p->right == NULL) {
+		Node *q = new Node(k);
+		p->right = q;
+		q->parent = p;
+		return;
+	}
+	if (rand() % 2) {
+		Add(k, p->right);
+	}
+	else {
+		Add(k, p->left);
+	}
+}
+
+void BinTree::Del(Node*p)
+{
+
+	Node *q = p->parent;
+	if ((p->left == NULL) && (p->right == NULL)) {
+		if (q->left == p) {
+			q->left = NULL;
+		}
+		else {
+			q->right = NULL;
+		}
+		delete p;
+		return;
+	}
+
+	if ((p->left == NULL) && (p->right)) {
+		p->right->parent = q;//убираем узел на котором стоим
+		if (q->left == p) {
+			q->left = p->right;
+		}
+		else {
+			q->right = p->right;
+		}
+		delete p;
+		return;
+	}
+
+	if ((p->left) && (p->right == NULL)) {
+		p->left->parent = q;
+		if (q->left == p) {
+			q->left = p->left;
+		}
+		else {
+			q->right = p->left;
+		}
+		delete p;
+		return;
+	}
+
+	Node *t = p->left;
+	while (t->left) t = t->left;
+	if (t->right == NULL) {
+		//if (runner->parent->left == runner) {
+		t->parent->left = NULL;
+		/*} else {
+			runner->parent->right = NULL;
+		}*/
+		t->left = p->left;
+		t->right = p->right;
+		if (t->left) t->left->parent = t;
+		t->right->parent = t;
+		t->parent = q;
+		if (q->left == p) {
+			q->left = t;
+		}
+		else {
+			q->right = t;
+		}
+	}
+	else {
+		t->parent->left = t->right;
+		t->right->parent = t->parent;
+		t->right = p->right;
+		t->left = p->left;
+		t->left->parent = t;
+		t->right->parent = t;
+		if (q->left == p) {
+			q->left = t;
+		}
+		else {
+			q->right = t;
+		}
+		t->parent = q;
+	}
+	delete p;
+}
+
+BinTree BinTree::operator=(BinTree&first)
+{
+	Clear(root);
+	if (first.root) {
+		root = new Node(first.root->key);
+		if (first.root->left) {
+			Copy(first.root->left, 1, root);
+		}
+		if (first.root->right) {
+			Copy(first.root->right, 0, root);
+		}
+	}
+	else {
+		root = NULL;
+	}
+	return *this;
+}
+
+void BinTree::TreeTraversalLCR(Node*p) //лево корень право
+{
+	if (!p) return;
+	if (p->left)
+		TreeTraversalLCR(p->left);
+	std::cout << p->key << ' ';
+	if (p->right)
+		TreeTraversalLCR(p->right);
+}
+
+void BinTree::TreeTraversalLRC(Node*p) //лево право корень 
+{
+	if (!p) return;
+	if (p->left)
+		TreeTraversalLRC(p->left);
+	if (p->right)
+		TreeTraversalLRC(p->right);
+	std::cout << p->key << " ";
+
+}
+
+void BinTree::TreeTraversalRLC(Node *p) //право -> лево -> корень
+{
+	if (!p);
+	if (p->right)
+		TreeTraversalRLC(p->right);
+	if (p->left)
+		TreeTraversalRLC(p->left);
+	std::cout << p->key << ' ';
+}
+
+Node * BinTree::FindKey(Node *p, int k)
+{
+	if (!p) return NULL;
+	if ((p->key) == k) return p;
+	/*FindKey(p->left, k);
+	FindKey(p->right, k);*/
+	if (FindKey(p->left, k)) return FindKey(p->left, k);
+	else return FindKey(p->right, k);
+}
+
+Node * BinTree::FindMax(Node *p)
+{
+	Node *max, *L, *R;
+	if (!p) return NULL;
+	//if (!p->left && !p->right) return p;
+	max = p;
+	L = FindMax(p->left);
+	R = FindMax(p->right);
+	if (L && (L->key > max->key)) max = L;
+	if (R && (R->key > max->key)) max = R;
+
+	return max;
+}
+
+Node * BinTree::FindMin(Node *p)
+{
+	Node *min, *L, *R;
+	if (!p) return NULL;
+	//if (!p->left && !p->right) return p;
+	min = p;
+	L = FindMin(p->left);
+	R = FindMin(p->right);
+	if (L && (L->key < min->key)) min = L;
+	if (R && (R->key < min->key)) min = R;
+
+	return min;
+}
+int BinTree::Hight(Node *p) // нахождение высоты
+{
+	if (p == NULL)
+		return 0;
+	int r, l, h = 0;
+	l = Hight(p->left);
+	r = Hight(p->right);
+	h = (l > r ? l : r) + 1; //условный оператор
+	return h;
+}
+
+void BinTree::PrintTree(Node *p, int k) // k - level of the tree, number of otstupov :D
+{
+	if (!p) return;
+	PrintTree(p->right, k + 5); //otstup 5
+	for (int i = 0; i < k; i++) {
+		std::cout << ' ';
+	}
+	std::cout << p->key << std::endl;
+	PrintTree(p->left, k + 5); //otstup 5
+}
+
+void BinTree::Clear(Node *p)
+{
+	if (p != NULL) {
+		if (p->left != NULL)
+			Clear(p->left);
+		if (p->right != NULL)
+			Clear(p->right);
+		delete p;
+	}
+}
+
+Node* BinTree::Root()
+{
+	return root;
+}
+
+class SBTree : public BinTree
+{
+public:
+	SBTree() :BinTree() {};
+	SBTree(int);
+	SBTree(int*, int);
+	SBTree(SBTree&);
+	~SBTree() {};
+	SBTree &operator=(SBTree &);
+	void Add(int, Node*);
+	void Del(Node*p);
+	Node* FindKey(Node*, int);
+	Node* FindMin(Node*);
+	Node* FindMax(Node*);
+};
+
+SBTree::SBTree(int n)
+{
+	if (n == 0) root = NULL;
+	else {
+		root = new Node(rand() % 100);
+		for (int i = 1; i < n; i++)
+			Add(rand() % 100, root);
+	}
+}
+
+SBTree::SBTree(int *a, int n)
+{
+	if (n == 0)root = NULL;
+	else {
+		root = new Node(a[0]);
+		for (int i = 1; i < n; i++) {
+			Add(a[i], root);
+		}
+	}
+}
+
+SBTree::SBTree(SBTree&first)
+{
+	if (first.root) {
+		root = new Node(first.root->key);
+		if (first.root->left) {
+			Copy(first.root->left, 0, root);
+		}
+		if (first.root->right) {
+			Copy(first.root->right, 1, root);
+		}
+	}
+	else {
+		root = NULL;
+	}
+}
+
+SBTree &SBTree::operator=(SBTree &first)
+{
+	Clear(root);
+	if (first.root) {
+		root = new Node(first.root->key);
+		if (first.root->left) {
+			Copy(first.root->left, 0, root);
+		}
+		if (first.root->right) {
+			Copy(first.root->right, 1, root);
+		}
+	}
+	else {
+		root = NULL;
+	}
+	return *this;
+}
+
+void SBTree::Add(int k, Node *p)
+{
+	Node *q;
+	if (k < p->key)
+		if (p->left == NULL)
+		{
+			q = new Node(k);
+			p->left = q;
+			q->parent = p;
+		}
+		else Add(k, p->left);
+	else  if (p->right == NULL)
+	{
+		q = new Node(k);
+		p->right = q;
+		q->parent = p;
+	}
+	else Add(k, p->right);
+}
+
+void SBTree::Del(Node *p)
+{
+	Node *q = p->parent;
+	//удаление листа
+	if (p->left == NULL && p->right == NULL)
+	{
+		if (q->left == p) q->left = NULL;
+		else q->right = NULL;
+		delete p;
+		return;
+	}
+	//нет левой ветви
+	if (p->left == NULL && p->right != NULL)
+	{
+		if (q->left == p) q->left = p->right;
+		else q->right = p->right;
+		p->right->parent = q;
+		delete p;
+		return;
+	}
+
+	//  нет правой ветви
+	if (p->left != NULL && p->right == NULL)
+	{
+		if (q->left == p) q->left = p->left;
+		else q->right = p->left;
+		p->left->parent = q;
+		delete p;
+		return;
+	}
+
+	//есть обе ветви
+	Node *t = p->left;
+	if (t->right == NULL)
+	{
+		if (q->left == p) q->left = t;
+		else q->right = t;
+		t->parent = q;
+		t->right = p->right;
+		p->right->parent = t;
+		delete p;
+		return;
+	}
+	else {
+		while (t->right != NULL) t = t->right;
+
+		t->parent->right = t->left;
+
+		if (t->left != NULL)t->left->parent = t->parent;
+
+		if (q->left == p) q->left = t;
+		else  q->right = t;
+
+		t->parent = q;
+		t->left = p->left;
+		t->right = p->right;
+		p->left->parent = t;
+		p->right->parent = t;
+		delete p;
+		return;
+	}
+}
+
+Node* SBTree::FindKey(Node*p, int k)
+{
+	if (!p) return NULL;
+	if ((p->key) == k) return p;
+	if (k > p->key) {
+		FindKey(p->right, k);
+	}
+	if (k <= p->key) {
+		FindKey(p->left, k);
+	}
+}
+
+Node* SBTree::FindMin(Node*p)
+{
+	Node *min, *L;
+	if (!p) return NULL;
+	min = p;
+	L = FindMin(p->left);
+	if (L && (L->key <= min->key))
+		min = L;
+	return min;
+}
+
+Node* SBTree::FindMax(Node*p)
+{
+	Node *max, *R;
+	if (!p) return NULL;
+	max = p;
+	R = FindMax(p->right);
+	if (R && (R->key >= max->key))
+		max = R;
+	return max;
+}
+
+void main()
+{
+	srand(time(NULL));
+	int n;
+	std::cout << "Enter number of the elements of the Tree" << std::endl;
+	std::cin >> n;
+	int *a = new int[n];
+	for (int i = 0; i < n; i++) {
+		a[i] = rand() % 100;
+		std::cout << a[i] << " ";
+	}
+	std::cout << std::endl;
+	SBTree Tree1(a, n);
+	std::cout << "There is Tree from array" << std::endl;
+	Tree1.PrintTree(Tree1.root, 0);
+	std::cout << std::endl;
+	std::cout << std::endl;
+
+	int ad;
+	std::cout << "Enter element to add" << std::endl;
+	std::cin >> ad;
+	Tree1.Add(ad, Tree1.root);
+	Tree1.PrintTree(Tree1.root, 1);
+	std::cout << std::endl;
+
+	int key;
+	std::cout << "Input key for searching" << std::endl;
+	std::cin >> key;
+	Node *k = NULL;
+	k = Tree1.FindKey(Tree1.root, key);
+	if (k != NULL) {
+		std::cout << "It's in tree!'" << std::endl;
+	}
+	else {
+		std::cout << "It's not in tree!" << std::endl;
+	}
+	std::cout << std::endl;
+
+	int max, min;
+	max = Tree1.FindMax(Tree1.root)->Key();
+	min = Tree1.FindMin(Tree1.root)->Key();
+	std::cout << "Max: " << max << std::endl;
+	std::cout << "Min: " << min << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "There is operator=" << std::endl;
+	int m;
+	std::cout << "Enter number of the elements of the Tree" << std::endl;
+	std::cin >> m;
+	int *t = new int[m];
+	for (int i = 0; i < m; i++) {
+		t[i] = rand() % 100;
+		std::cout << t[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << std::endl;
+	SBTree Tree2(t, m), Tree3;
+	Tree2.PrintTree(Tree2.root, 0);
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "There is operator=" << std::endl;
+	Tree3 = Tree1 = Tree2;
+	Tree3.PrintTree((Tree1 = Tree2).root, 0);
+	std::cout << std::endl;
+
+	system("pause");
+}
